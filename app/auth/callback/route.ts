@@ -7,16 +7,12 @@ export async function GET(request: NextRequest) {
   const code  = searchParams.get("code");
   const error = searchParams.get("error");
 
-  // GitHub declined the auth
   if (error) {
-    console.error("[auth/callback] OAuth error:", error);
-    return NextResponse.redirect(
-      new URL(`/?error=auth_failed`, request.url)
-    );
+    return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/?error=no_code", request.url));
   }
 
   const cookieStore = await cookies();
@@ -38,11 +34,16 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {
-    console.error("[auth/callback] Exchange error:", exchangeError.message);
-    return NextResponse.redirect(new URL(`/?error=auth_failed`, request.url));
+    return NextResponse.redirect(
+      new URL(`/?error=${encodeURIComponent(exchangeError.message)}`, request.url)
+    );
+  }
+
+  if (!data.session) {
+    return NextResponse.redirect(new URL("/?error=no_session", request.url));
   }
 
   return NextResponse.redirect(new URL("/", request.url));
