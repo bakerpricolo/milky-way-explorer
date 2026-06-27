@@ -35,18 +35,8 @@ function GalacticCentre() {
 // ─── Camera auto-rotate scene component ─────────────────────────────────────
 
 function SceneSetup() {
-  const { camera } = useThree();
-  const controlsRef = useRef<{ target: THREE.Vector3; update: () => void } | null>(null);
   const focusTarget = useStore((s) => s.focusTarget);
   const setFocus    = useStore((s) => s.setFocusTarget);
-
-  useFrame(() => {
-    // Smoothly move to focus target when set
-    if (focusTarget && controlsRef.current) {
-      // Just clear for now; actual fly-to requires OrbitControls damping
-      setFocus(null);
-    }
-  });
 
   return (
     <>
@@ -58,7 +48,6 @@ function SceneSetup() {
         far={500}
       />
       <OrbitControls
-        ref={controlsRef as React.Ref<unknown>}
         enablePan={false}
         minDistance={2}
         maxDistance={45}
@@ -73,7 +62,6 @@ function SceneSetup() {
     </>
   );
 }
-
 // ─── Galaxy canvas ────────────────────────────────────────────────────────────
 
 export default function GalaxyCanvas() {
