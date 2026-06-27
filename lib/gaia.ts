@@ -109,13 +109,39 @@ interface SimbadResult {
  * Returns basic position data; callers must cross-match to Gaia separately.
  */
 export async function searchByName(name: string): Promise<SimbadResult[]> {
-  const query = `
-    SELECT TOP 10 main_id, ra, dec
-    FROM basic
-    WHERE otype_txt IN ('Star','**','*','HB*','sg*','s*r','s*y','s*b','s*g')
-    AND main_id ILIKE '%${name.replace(/'/g, "''")}%'
-    ORDER BY main_id
-  `.trim();
+  // Use CDS Sesame name resolver — the most reliable way to look up star names
+  try {
+    const sesameUrl = `https://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oxj/SNV?${encodeURIComponent(name)}`;
+    const res = await fetch(sesameUrl, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(6_000),
+    });
+
+    if (res.ok) {
+      const text = await res.text();
+      // Sesame returns JSONP-like text, parse the JSON portion
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        const resolvers = data?.Target?.Resolver ?? [];
+        const results: SimbadResult[] = [];
+        for (const r of resolvers) {
+          if (r.jradeg != null && r.jdedeg != null) {
+            results.push({
+              main_id: r.oname ?? name,
+              ra:  Number(r.jradeg),
+              dec: Number(r.jdedeg),
+            });
+          }
+        }
+        if (results.length > 0) return results;
+      }
+    }
+  } catch { /* fall through to SIMBAD TAP */ }
+
+  // Fallback: SIMBAD TAP with simple LIKE search
+  const safeName = name.replace(/'/g, "''");
+  const query = `SELECT TOP 10 main_id, ra, dec FROM basic WHERE main_id LIKE '%${safeName}%' ORDER BY main_id`;
 
   const params = new URLSearchParams({
     REQUEST: "doQuery",
@@ -127,6 +153,7 @@ export async function searchByName(name: string): Promise<SimbadResult[]> {
   try {
     const res = await fetch(`${SIMBAD_TAP}?${params}`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(6_000),
     });
     if (!res.ok) return [];
     const data: GaiaTapResponse = await res.json();
