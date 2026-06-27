@@ -202,3 +202,4 @@ Pull requests welcome. Please run `npm run type-check && npm run lint` before su
 ## 📄 License
 
 MIT © 2024
+# milky-way-explorer
