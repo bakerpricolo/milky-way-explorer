@@ -8,15 +8,15 @@ export function createClient() {
       auth: {
         flowType: "pkce",
         storage: {
-          getItem: (key) => {
+          getItem: (key: string) => {
             if (typeof document === "undefined") return null;
             const match = document.cookie.match(new RegExp(`(^| )${key}=([^;]+)`));
             return match ? decodeURIComponent(match[2]) : null;
           },
-          setItem: (key, value) => {
+          setItem: (key: string, value: string) => {
             document.cookie = `${key}=${encodeURIComponent(value)};path=/;max-age=3600;SameSite=Lax`;
           },
-          removeItem: (key) => {
+          removeItem: (key: string) => {
             document.cookie = `${key}=;path=/;max-age=0`;
           },
         },
