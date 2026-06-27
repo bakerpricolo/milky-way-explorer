@@ -10,13 +10,13 @@ export default function AuthModal() {
 
 const handleGitHubSignIn = async () => {
   const supabase = createClient();
-  await supabase.auth.signInWithOAuth({
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: {
       redirectTo: `https://milky-way-explorer-ten.vercel.app/auth/callback`,
-      skipBrowserRedirect: false,
     },
   });
+  if (error) console.error(error);
 };
 
   return (
