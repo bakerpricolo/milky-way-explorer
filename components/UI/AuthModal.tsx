@@ -8,15 +8,16 @@ import { createClient } from "@/lib/supabase/client";
 export default function AuthModal() {
   const { isAuthModalOpen, setAuthModalOpen } = useStore();
 
-  const handleGitHubSignIn = async () => {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  };
+const handleGitHubSignIn = async () => {
+  const supabase = createClient();
+  await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      redirectTo: `https://milky-way-explorer-ten.vercel.app/auth/callback`,
+      skipBrowserRedirect: false,
+    },
+  });
+};
 
   return (
     <AnimatePresence>
