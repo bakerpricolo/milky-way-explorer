@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import type { GaiaStar, Bookmark, AppUser } from "@/types";
 
+interface RulerData {
+  pixelWidth: number;
+  lightYears: number;
+}
+
 interface AppState {
   // ── Star data ────────────────────────────────────────
   gaiaStars: GaiaStar[];
@@ -43,24 +48,32 @@ interface AppState {
   user: AppUser | null;
   setUser: (user: AppUser | null) => void;
 
-  // ── Galaxy loading state ─────────────────────────────
+  // ── Galaxy loading ────────────────────────────────────
   isGaiaLoaded: boolean;
   setGaiaLoaded: (v: boolean) => void;
 
   // ── Time controls ─────────────────────────────────────
-  timeOffset: number;  // years from present (negative = past, positive = future)
+  timeOffset: number;
   setTimeOffset: (years: number) => void;
+
+  // ── Spectral filters ──────────────────────────────────
+  spectralFilter: Record<string, boolean>;
+  toggleSpectralType: (type: string) => void;
+  setAllSpectralTypes: (visible: boolean) => void;
+
+  // ── Scale ruler ───────────────────────────────────────
+  rulerData: RulerData | null;
+  setRulerData: (data: RulerData | null) => void;
 }
 
+const ALL_TYPES = { O: true, B: true, A: true, F: true, G: true, K: true, M: true };
+
 export const useStore = create<AppState>((set) => ({
-  // Star data
   gaiaStars: [],
   setGaiaStars: (stars) => set({ gaiaStars: stars }),
 
-  // Interaction
   selectedStar: null,
-  setSelectedStar: (star) =>
-    set({ selectedStar: star, isStarPanelOpen: star !== null }),
+  setSelectedStar: (star) => set({ selectedStar: star, isStarPanelOpen: star !== null }),
 
   hoveredStarId: null,
   setHoveredStarId: (id) => set({ hoveredStarId: id }),
@@ -68,10 +81,8 @@ export const useStore = create<AppState>((set) => ({
   focusTarget: null,
   setFocusTarget: (target) => set({ focusTarget: target }),
 
-  // UI panels
   isStarPanelOpen: false,
-  setStarPanelOpen: (open) =>
-    set({ isStarPanelOpen: open, selectedStar: open ? undefined : null }),
+  setStarPanelOpen: (open) => set({ isStarPanelOpen: open, selectedStar: open ? undefined : null }),
 
   isBookmarksPanelOpen: false,
   setBookmarksPanelOpen: (open) => set({ isBookmarksPanelOpen: open }),
@@ -79,29 +90,33 @@ export const useStore = create<AppState>((set) => ({
   isAuthModalOpen: false,
   setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
 
-  // Search
   searchQuery: "",
   setSearchQuery: (q) => set({ searchQuery: q }),
   searchResults: [],
   setSearchResults: (r) => set({ searchResults: r }),
 
-  // Bookmarks
   bookmarks: [],
   setBookmarks: (bookmarks) => set({ bookmarks }),
-  addBookmark: (bookmark) =>
-    set((s) => ({ bookmarks: [...s.bookmarks, bookmark] })),
-  removeBookmark: (starId) =>
-    set((s) => ({ bookmarks: s.bookmarks.filter((b) => b.star_id !== starId) })),
+  addBookmark: (bookmark) => set((s) => ({ bookmarks: [...s.bookmarks, bookmark] })),
+  removeBookmark: (starId) => set((s) => ({ bookmarks: s.bookmarks.filter((b) => b.star_id !== starId) })),
 
-  // User
   user: null,
   setUser: (user) => set({ user }),
 
-  // Loading
   isGaiaLoaded: false,
   setGaiaLoaded: (v) => set({ isGaiaLoaded: v }),
 
-  // Time controls
   timeOffset: 0,
   setTimeOffset: (years) => set({ timeOffset: years }),
+
+  spectralFilter: { ...ALL_TYPES },
+  toggleSpectralType: (type) =>
+    set((s) => ({
+      spectralFilter: { ...s.spectralFilter, [type]: !s.spectralFilter[type] },
+    })),
+  setAllSpectralTypes: (visible) =>
+    set({ spectralFilter: Object.fromEntries(Object.keys(ALL_TYPES).map((k) => [k, visible])) }),
+
+  rulerData: null,
+  setRulerData: (data) => set({ rulerData: data }),
 }));

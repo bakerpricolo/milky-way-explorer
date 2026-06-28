@@ -2,28 +2,25 @@
 
 import { Suspense, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import {
-  OrbitControls,
-  PerspectiveCamera,
-  Stars,
-} from "@react-three/drei";
+import { OrbitControls, PerspectiveCamera, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import GalaxyPoints from "./GalaxyPoints";
 import GaiaStars    from "./GaiaStars";
 import { useStore }  from "@/lib/store";
 
-// ─── Galactic centre glow ────────────────────────────────────────────────────
+const LY_PER_KPC = 3261.56;
+
+// Nice round ruler distances in light years
+const RULER_STEPS_LY = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000];
 
 function GalacticCentre() {
   const meshRef = useRef<THREE.Mesh>(null);
-
   useFrame(({ clock }) => {
     if (meshRef.current) {
       const mat = meshRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = 0.18 + Math.sin(clock.elapsedTime * 0.4) * 0.04;
     }
   });
-
   return (
     <mesh ref={meshRef} position={[0, 0, 0]}>
       <sphereGeometry args={[0.6, 32, 32]} />
@@ -32,21 +29,37 @@ function GalacticCentre() {
   );
 }
 
-// ─── Camera auto-rotate scene component ─────────────────────────────────────
+/** Runs inside the canvas, projects a known 3D distance to screen pixels and stores it. */
+function ScaleCalculator() {
+  const { camera, size } = useThree();
+  const setRulerData = useStore((s) => s.setRulerData);
+  const p1 = useRef(new THREE.Vector3());
+  const p2 = useRef(new THREE.Vector3());
+
+  useFrame(() => {
+    // Choose a ruler distance that projects to ~100–200px
+    let bestLy   = RULER_STEPS_LY[0];
+    let bestPx   = 0;
+
+    for (const ly of RULER_STEPS_LY) {
+      const kpc = ly / LY_PER_KPC;
+      p1.current.set(0, 0, 0).project(camera);
+      p2.current.set(kpc, 0, 0).project(camera);
+      const px = Math.abs(p2.current.x - p1.current.x) * size.width / 2;
+      if (px >= 60 && px <= 250) { bestLy = ly; bestPx = px; break; }
+      if (px < 60) { bestLy = ly; bestPx = px; } // take the last too-small value as fallback
+    }
+
+    setRulerData({ pixelWidth: bestPx, lightYears: bestLy });
+  });
+
+  return null;
+}
 
 function SceneSetup() {
-  const focusTarget = useStore((s) => s.focusTarget);
-  const setFocus    = useStore((s) => s.setFocusTarget);
-
   return (
     <>
-      <PerspectiveCamera
-        makeDefault
-        position={[8.5, 6, 18]}
-        fov={55}
-        near={0.01}
-        far={500}
-      />
+      <PerspectiveCamera makeDefault position={[8.5, 6, 18]} fov={55} near={0.01} far={500} />
       <OrbitControls
         enablePan={false}
         minDistance={2}
@@ -62,39 +75,23 @@ function SceneSetup() {
     </>
   );
 }
-// ─── Galaxy canvas ────────────────────────────────────────────────────────────
 
 export default function GalaxyCanvas() {
   return (
     <Canvas
       style={{ background: "#000010" }}
-      gl={{
-        antialias: true,
-        alpha: false,
-        toneMapping: THREE.NoToneMapping,
-      }}
+      gl={{ antialias: true, alpha: false, toneMapping: THREE.NoToneMapping }}
       dpr={[1, 2]}
     >
       <SceneSetup />
-
-      {/* Distant background stars */}
       <Stars radius={80} depth={60} count={3000} factor={3} saturation={0.3} fade />
-
-      {/* Ambient dim light */}
       <ambientLight intensity={0.02} />
-
-      {/* Galactic centre point light – warm orange glow */}
       <pointLight position={[0, 0, 0]} intensity={0.3} color="#ffaa44" decay={2} />
-
       <Suspense fallback={null}>
-        {/* 200 000 procedural stars */}
         <GalaxyPoints />
-
-        {/* Real Gaia DR3 stars (loaded async) */}
         <GaiaStars />
-
-        {/* Galactic centre glow sphere */}
         <GalacticCentre />
+        <ScaleCalculator />
       </Suspense>
     </Canvas>
   );
