@@ -13,18 +13,20 @@ export default function Navbar() {
     setAuthModalOpen,
   } = useStore();
 
-  // Sync Supabase session into store
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        const u = data.session.user;
         setUser({
-          id: data.user.id,
-          email: data.user.email ?? null,
-          avatar_url: data.user.user_metadata?.avatar_url ?? null,
-          user_metadata: data.user.user_metadata,
+          id: u.id,
+          email: u.email ?? null,
+          avatar_url: u.user_metadata?.avatar_url ?? null,
+          user_metadata: u.user_metadata,
         });
+        supabase.from("bookmarks").select("*").order("created_at", { ascending: false })
+          .then(({ data: bm }) => { if (bm) useStore.getState().setBookmarks(bm); });
       }
     });
 
@@ -36,11 +38,8 @@ export default function Navbar() {
           avatar_url: session.user.user_metadata?.avatar_url ?? null,
           user_metadata: session.user.user_metadata,
         });
-        // Load bookmarks on sign-in
-        fetch("/api/bookmarks")
-          .then((r) => r.json())
-          .then((d) => { if (d.bookmarks) useStore.getState().setBookmarks(d.bookmarks); })
-          .catch(console.error);
+        supabase.from("bookmarks").select("*").order("created_at", { ascending: false })
+          .then(({ data: bm }) => { if (bm) useStore.getState().setBookmarks(bm); });
       } else {
         setUser(null);
         useStore.getState().setBookmarks([]);
@@ -58,7 +57,6 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-5
                     border-b border-white/8 bg-space-950/70 backdrop-blur-lg">
-      {/* Brand */}
       <div className="flex items-center gap-2.5">
         <Telescope className="w-5 h-5 text-star-cyan" />
         <span className="font-semibold text-star-white tracking-tight">Milky Way Explorer</span>
@@ -68,7 +66,6 @@ export default function Navbar() {
         </span>
       </div>
 
-      {/* Star counter */}
       <div className="hidden md:flex items-center gap-1.5 text-xs font-mono text-slate-500">
         {isGaiaLoaded ? (
           <>
@@ -78,9 +75,7 @@ export default function Navbar() {
               {" "}real stars loaded
             </span>
             <span className="mx-2 text-slate-700">·</span>
-            <span>
-              <span className="text-slate-400">200,000</span> procedural
-            </span>
+            <span><span className="text-slate-400">200,000</span> procedural</span>
           </>
         ) : (
           <>
@@ -90,9 +85,7 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Right controls */}
       <div className="flex items-center gap-2">
-        {/* Bookmarks */}
         <button
           onClick={() => setBookmarksPanelOpen(!isBookmarksPanelOpen)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-colors
@@ -105,7 +98,6 @@ export default function Navbar() {
           <span className="hidden sm:inline">Bookmarks</span>
         </button>
 
-        {/* Auth */}
         {user ? (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-2 py-1.5 rounded border border-white/10">

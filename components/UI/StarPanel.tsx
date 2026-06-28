@@ -1,5 +1,6 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -61,30 +62,29 @@ function BookmarkButton({ star }: { star: GaiaStar }) {
   const toggle = async () => {
     if (!user) { setAuthModalOpen(true); return; }
     setLoading(true);
+    const supabase = createClient();
     try {
       if (isBookmarked) {
-        await fetch(`/api/bookmarks?star_id=${star.source_id}`, { method: "DELETE" });
+        await supabase.from("bookmarks").delete()
+          .eq("user_id", user.id).eq("star_id", star.source_id);
         removeBookmark(star.source_id);
       } else {
-        const res = await fetch("/api/bookmarks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            star_id:     star.source_id,
-            ra:          star.ra,
-            dec:         star.dec,
-            magnitude:   star.phot_g_mean_mag,
-            temperature: star.teff_val,
-            distance_pc: star.parallax ? parallaxToDistance(star.parallax) : null,
-          }),
-        });
-        const data = await res.json();
-        if (data.bookmark) addBookmark(data.bookmark);
+        const { data } = await supabase.from("bookmarks").upsert({
+          user_id:     user.id,
+          star_id:     star.source_id,
+          ra:          star.ra,
+          dec:         star.dec,
+          magnitude:   star.phot_g_mean_mag,
+          temperature: star.teff_val,
+          distance_pc: star.parallax ? 1000 / star.parallax : null,
+        }, { onConflict: "user_id,star_id" }).select().single();
+        if (data) addBookmark(data);
       }
     } finally {
       setLoading(false);
     }
   };
+  // ... rest stays the same
 
   return (
     <button
