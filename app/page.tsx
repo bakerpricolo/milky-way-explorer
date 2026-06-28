@@ -1,9 +1,10 @@
 import dynamic from "next/dynamic";
-import Navbar       from "@/components/UI/Navbar";
-import SearchBar    from "@/components/UI/SearchBar";
-import StarPanel    from "@/components/UI/StarPanel";
-import BookmarkList from "@/components/UI/BookmarkList";
-import AuthModal    from "@/components/UI/AuthModal";
+import Navbar        from "@/components/UI/Navbar";
+import SearchBar     from "@/components/UI/SearchBar";
+import StarPanel     from "@/components/UI/StarPanel";
+import BookmarkList  from "@/components/UI/BookmarkList";
+import AuthModal     from "@/components/UI/AuthModal";
+import TimeControls  from "@/components/UI/TimeControls";
 
 /**
  * The galaxy canvas uses Three.js / WebGL, which only runs in the browser.
@@ -44,12 +45,8 @@ export default function Home() {
       {/* Auth modal (portal-style, centred) */}
       <AuthModal />
 
-      {/* Bottom hint */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-        <p className="text-[11px] font-mono text-slate-700 text-center">
-          Drag to rotate · Scroll to zoom · Click a star for details
-        </p>
-      </div>
+      {/* Bottom: time controls */}
+      <TimeControls />
     </main>
   );
 }

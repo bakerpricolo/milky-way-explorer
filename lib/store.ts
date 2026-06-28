@@ -13,7 +13,6 @@ interface AppState {
   hoveredStarId: string | null;
   setHoveredStarId: (id: string | null) => void;
 
-  /** Fly-to target set by search / bookmark click */
   focusTarget: { ra: number; dec: number } | null;
   setFocusTarget: (target: { ra: number; dec: number } | null) => void;
 
@@ -47,6 +46,10 @@ interface AppState {
   // ── Galaxy loading state ─────────────────────────────
   isGaiaLoaded: boolean;
   setGaiaLoaded: (v: boolean) => void;
+
+  // ── Time controls ─────────────────────────────────────
+  timeOffset: number;  // years from present (negative = past, positive = future)
+  setTimeOffset: (years: number) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -97,4 +100,8 @@ export const useStore = create<AppState>((set) => ({
   // Loading
   isGaiaLoaded: false,
   setGaiaLoaded: (v) => set({ isGaiaLoaded: v }),
+
+  // Time controls
+  timeOffset: 0,
+  setTimeOffset: (years) => set({ timeOffset: years }),
 }));

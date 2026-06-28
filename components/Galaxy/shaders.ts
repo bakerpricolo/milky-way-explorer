@@ -61,30 +61,34 @@ export const fragmentShader = /* glsl */ `
   }
 `;
 
-// ─── Gaia-star shaders (brighter, larger) ────────────────────────────────────
+// ─── Gaia-star shaders (brighter, larger, time-aware) ────────────────────────
 
 export const gaiaVertexShader = /* glsl */ `
   attribute float a_size;
   attribute vec3  a_color;
   attribute float a_selected;
+  attribute vec3  a_velocity;   // kpc per year (from pmra/pmdec)
 
   varying vec3  v_color;
   varying float v_alpha;
   varying float v_selected;
 
   uniform float u_pixelRatio;
+  uniform float u_timeOffset;   // years from present
 
   void main() {
     v_color    = a_color;
     v_selected = a_selected;
 
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    // Apply proper motion displacement
+    vec3 displaced = position + a_velocity * u_timeOffset;
+
+    vec4 mvPosition = modelViewMatrix * vec4(displaced, 1.0);
     float depth = -mvPosition.z;
 
     float pointSize = a_size * u_pixelRatio * (400.0 / depth);
     pointSize = clamp(pointSize, 1.0, 18.0);
 
-    // Enlarge selected star
     if (a_selected > 0.5) pointSize = max(pointSize * 2.5, 10.0);
 
     v_alpha = smoothstep(0.8, 2.5, pointSize) * 0.95 + 0.05;
