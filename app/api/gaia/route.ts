@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       .from("stars")
       .select("*")
       .order("phot_g_mean_mag", { ascending: true })
-      .limit(5000);
+      .range(0,4999);
 
     if (!error && stars && stars.length > 0) {
       return NextResponse.json(
