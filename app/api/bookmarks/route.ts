@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 // ── GET /api/bookmarks ────────────────────────────────────────────────────────
-// Returns all bookmarks for the authenticated user.
 
 export async function GET() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = session.user;
 
   const { data: bookmarks, error } = await supabase
     .from("bookmarks")
@@ -26,15 +26,15 @@ export async function GET() {
 }
 
 // ── POST /api/bookmarks ───────────────────────────────────────────────────────
-// Create a new bookmark for the authenticated user.
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = session.user;
 
   const body = await request.json() as {
     star_id: string;
@@ -78,15 +78,15 @@ export async function POST(request: NextRequest) {
 }
 
 // ── DELETE /api/bookmarks?star_id=<id> ───────────────────────────────────────
-// Delete a specific bookmark for the authenticated user.
 
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const user = session.user;
 
   const starId = request.nextUrl.searchParams.get("star_id");
   if (!starId) {
