@@ -76,3 +76,55 @@ export function formatDistance(pc: number): string {
 export function formatPM(mas_yr: number): string {
   return `${mas_yr.toFixed(3)} mas/yr`;
 }
+
+// ─── Equatorial → Galactic conversion ────────────────────────────────────────
+
+const _NGP_RA  = 192.85948 * Math.PI / 180;
+const _NGP_DEC =  27.12825 * Math.PI / 180;
+const _GC_LONG = 122.93192;
+
+export function equatorialToGalactic(raDeg: number, decDeg: number): { l: number; b: number } {
+  const raRad  = raDeg  * Math.PI / 180;
+  const decRad = decDeg * Math.PI / 180;
+  const sinB   = Math.sin(decRad) * Math.sin(_NGP_DEC)
+               + Math.cos(decRad) * Math.cos(_NGP_DEC) * Math.cos(raRad - _NGP_RA);
+  const b      = Math.asin(Math.max(-1, Math.min(1, sinB))) * 180 / Math.PI;
+  const y      = Math.cos(decRad) * Math.sin(raRad - _NGP_RA);
+  const x      = Math.sin(decRad) * Math.cos(_NGP_DEC)
+               - Math.cos(decRad) * Math.sin(_NGP_DEC) * Math.cos(raRad - _NGP_RA);
+  const lCalc  = Math.atan2(y, x) * 180 / Math.PI;
+  const l      = ((_GC_LONG - lCalc) % 360 + 360) % 360;
+  return { l, b };
+}
+
+/**
+ * Convert equatorial coordinates + distance (parsecs) to Three.js galactocentric XYZ.
+ */
+export function equatorialToXYZ(raDeg: number, decDeg: number, distPc: number) {
+  const { l, b } = equatorialToGalactic(raDeg, decDeg);
+  const parallaxMas = 1000 / distPc;
+  return galacticToXYZ(l, b, parallaxMas);
+}
+
+// ─── Habitable zone calculation ───────────────────────────────────────────────
+
+/**
+ * Estimate stellar luminosity relative to Sun from effective temperature.
+ * Uses main-sequence mass-luminosity relation approximation.
+ */
+function estimateLuminosity(teffK: number): number {
+  const tRatio = teffK / 5778; // Sun temperature
+  // Approximate: L ∝ T^4 * R^2, R ∝ T^0.8 for main sequence
+  return Math.pow(tRatio, 4) * Math.pow(tRatio, 1.6);
+}
+
+/**
+ * Calculate habitable zone inner and outer boundaries in AU.
+ * Uses Kopparapu et al. (2013) approximation.
+ */
+export function habitableZoneAU(teffK: number): { inner: number; outer: number } {
+  const L   = estimateLuminosity(teffK);
+  const inner = Math.sqrt(L / 1.1);
+  const outer = Math.sqrt(L / 0.53);
+  return { inner: +inner.toFixed(2), outer: +outer.toFixed(2) };
+}

@@ -7,6 +7,8 @@ import AuthModal    from "@/components/UI/AuthModal";
 import TimeControls from "@/components/UI/TimeControls";
 import FilterPanel  from "@/components/UI/FilterPanel";
 import ScaleRuler   from "@/components/UI/ScaleRuler";
+import ViewControls from "@/components/UI/ViewControls";
+import PlanetPanel  from "@/components/UI/PlanetPanel";
 
 const GalaxyCanvas = dynamic(() => import("@/components/Galaxy"), {
   ssr: false,
@@ -27,11 +29,13 @@ export default function Home() {
       <Navbar />
       <SearchBar />
       <StarPanel />
+      <PlanetPanel />
       <BookmarkList />
       <AuthModal />
       <TimeControls />
       <FilterPanel />
       <ScaleRuler />
+      <ViewControls />
     </main>
   );
 }

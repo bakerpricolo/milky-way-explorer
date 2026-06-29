@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,7 +8,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { bpRpToTemperature } from "@/lib/galaxy";
-import { parallaxToDistance, formatDistance, formatPM } from "@/lib/coordinates";
+import { parallaxToDistance, formatDistance, formatPM, habitableZoneAU } from "@/lib/coordinates";
 import SpectrumChart from "./SpectrumChart";
 import type { GaiaStar } from "@/types";
 
@@ -62,29 +61,30 @@ function BookmarkButton({ star }: { star: GaiaStar }) {
   const toggle = async () => {
     if (!user) { setAuthModalOpen(true); return; }
     setLoading(true);
-    const supabase = createClient();
     try {
       if (isBookmarked) {
-        await supabase.from("bookmarks").delete()
-          .eq("user_id", user.id).eq("star_id", star.source_id);
+        await fetch(`/api/bookmarks?star_id=${star.source_id}`, { method: "DELETE" });
         removeBookmark(star.source_id);
       } else {
-        const { data } = await supabase.from("bookmarks").upsert({
-          user_id:     user.id,
-          star_id:     star.source_id,
-          ra:          star.ra,
-          dec:         star.dec,
-          magnitude:   star.phot_g_mean_mag,
-          temperature: star.teff_val,
-          distance_pc: star.parallax ? 1000 / star.parallax : null,
-        }, { onConflict: "user_id,star_id" }).select().single();
-        if (data) addBookmark(data);
+        const res = await fetch("/api/bookmarks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            star_id:     star.source_id,
+            ra:          star.ra,
+            dec:         star.dec,
+            magnitude:   star.phot_g_mean_mag,
+            temperature: star.teff_val,
+            distance_pc: star.parallax ? parallaxToDistance(star.parallax) : null,
+          }),
+        });
+        const data = await res.json();
+        if (data.bookmark) addBookmark(data.bookmark);
       }
     } finally {
       setLoading(false);
     }
   };
-  // ... rest stays the same
 
   return (
     <button
@@ -233,6 +233,47 @@ export default function StarPanel() {
                   <DataRow label="Parallax" value={`${star.parallax.toFixed(4)} mas`} />
                 )}
               </div>
+
+              {/* Habitable zone */}
+              {temp && (
+                <div>
+                  <h3 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Habitable Zone</h3>
+                  {(() => {
+                    const hz = habitableZoneAU(temp);
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs font-mono">
+                          <span className="text-slate-400">Inner edge</span>
+                          <span className="text-star-white">{hz.inner} AU</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-mono">
+                          <span className="text-slate-400">Outer edge</span>
+                          <span className="text-star-white">{hz.outer} AU</span>
+                        </div>
+                        {/* Visual bar */}
+                        <div className="relative h-1.5 bg-white/8 rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="absolute h-full rounded-full bg-gradient-to-r from-yellow-400/60 to-green-400/60"
+                            style={{
+                              left:  `${Math.min((hz.inner / (hz.outer * 2)) * 100, 80)}%`,
+                              width: `${Math.min(((hz.outer - hz.inner) / (hz.outer * 2)) * 100, 40)}%`,
+                            }}
+                          />
+                          {/* Earth marker at 1 AU equivalent (scaled) */}
+                          <div
+                            className="absolute top-0 bottom-0 w-px bg-blue-400/80"
+                            style={{ left: `${Math.min((1 / (hz.outer * 2)) * 100, 95)}%` }}
+                            title="1 AU"
+                          />
+                        </div>
+                        <p className="text-[9px] text-slate-600 font-mono">
+                          {hz.inner <= 1 && hz.outer >= 1 ? "★ Earth would be in the habitable zone" : "Earth orbit outside habitable zone"}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* External links */}
               <div>
