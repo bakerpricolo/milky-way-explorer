@@ -25,7 +25,7 @@ function computeVelocity(
 }
 
 export default function GaiaStars() {
-  const { gaiaStars, selectedStar, setSelectedStar, setGaiaLoaded, timeOffset, spectralFilter } = useStore();
+  const { gaiaStars, selectedStar, setSelectedStar, setGaiaLoaded, timeOffset, spectralFilter, viewMode } = useStore();
   const pointsRef  = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
 
@@ -104,6 +104,7 @@ export default function GaiaStars() {
       uniforms: {
         u_pixelRatio: { value: typeof window !== "undefined" ? window.devicePixelRatio : 1 },
         u_timeOffset: { value: 0 },
+        u_opacity:    { value: 1.0 },
       },
     });
     materialRef.current = mat;
@@ -122,6 +123,9 @@ export default function GaiaStars() {
   useFrame(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.u_timeOffset.value = timeOffset;
+      const targetOpacity = viewMode === "solar" ? 0.0 : 1.0;
+      const cur = materialRef.current.uniforms.u_opacity.value as number;
+      materialRef.current.uniforms.u_opacity.value = cur + (targetOpacity - cur) * 0.05;
     }
   });
 
