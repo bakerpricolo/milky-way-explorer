@@ -96,7 +96,7 @@ export interface Exoplanet {
 export interface PointOfInterest {
   id: string;
   name: string;
-  type: "star-system" | "nebula" | "cluster" | "special";
+  type: "star-system" | "nebula" | "cluster" | "special" | "star";
   ra: number;
   dec: number;
   distancePc: number;
